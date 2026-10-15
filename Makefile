@@ -1,9 +1,9 @@
 .PHONY: build push test
 
-DOCKER_IMAGE=overv/openstreetmap-tile-server
+DOCKER_IMAGE=ghcr.io/tijpenk/openstreetmap-tile-server
 
 build:
-	docker build -t ${DOCKER_IMAGE} .
+	docker build --platform linux/amd64 -t ${DOCKER_IMAGE} .
 
 push: build
 	docker push ${DOCKER_IMAGE}:latest
