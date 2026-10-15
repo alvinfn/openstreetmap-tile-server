@@ -61,10 +61,16 @@ if [ "$1" == "import" ]; then
     setPostgresPassword
 
     # Download Luxembourg as sample if no data is provided
+    # if [ ! -f /data/region.osm.pbf ] && [ -z "${DOWNLOAD_PBF:-}" ]; then
+    #     echo "WARNING: No import file at /data/region.osm.pbf, so importing Luxembourg as example..."
+    #     DOWNLOAD_PBF="https://download.geofabrik.de/europe/luxembourg-latest.osm.pbf"
+    #     DOWNLOAD_POLY="https://download.geofabrik.de/europe/luxembourg.poly"
+    # fi
+    # Download Java Indonesia as sample if no data is provided
     if [ ! -f /data/region.osm.pbf ] && [ -z "${DOWNLOAD_PBF:-}" ]; then
         echo "WARNING: No import file at /data/region.osm.pbf, so importing Luxembourg as example..."
-        DOWNLOAD_PBF="https://download.geofabrik.de/europe/luxembourg-latest.osm.pbf"
-        DOWNLOAD_POLY="https://download.geofabrik.de/europe/luxembourg.poly"
+        DOWNLOAD_PBF="https://download.geofabrik.de/asia/indonesia/java-latest.osm.pbf"
+        DOWNLOAD_POLY="https://download.geofabrik.de/asia/indonesia/java.poly"
     fi
 
     if [ -n "${DOWNLOAD_PBF:-}" ]; then
