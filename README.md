@@ -287,6 +287,21 @@ For too high values you may notice excessive CPU load and memory usage. It might
 
 You may be running into problems with memory usage during the import. Have a look at the "Flat nodes" section in this README.
 
+## Kubernates deployment
+
+Jalankan Job import dan PVC terlebih dahulu (aplikasi server akan error jika dijalankan sebelum data diimpor):
+
+```
+kubectl apply -f osm-stack.yml
+```
+
+Pantau proses import (proses ini memakan waktu dan resource CPU/RAM yang cukup tinggi tergantung ukuran peta):
+
+```
+kubectl logs -f job/osm-import-job -c osm-import
+```
+
+
 ## License
 
 ```
