@@ -30,7 +30,8 @@ jobs:
         - arch    : arm64
           variant : v8
           mode    : build-only
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
     env:
       VOLUME    : osm-db
       CONTAINER : osm-www
