@@ -1,0 +1,121 @@
+---
+# 1. Persistent Volume Claim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: osm-data-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+# 2. Job Import Data
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: osm-import-job
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: download-pbf
+          image: alpine:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - "apk add --no-cache wget && wget -O /data/region.osm.pbf https://download.geofabrik.de/asia/indonesia/java-latest.osm.pbf"
+          volumeMounts:
+            - name: pbf-volume
+              mountPath: /data
+      containers:
+        - name: osm-import
+          image: overv/openstreetmap-tile-server:latest
+          args: ["import"]
+          volumeMounts:
+            - name: pbf-volume
+              mountPath: /data/region.osm.pbf
+              subPath: region.osm.pbf
+            - name: osm-data
+              mountPath: /data/database/
+      volumes:
+        - name: pbf-volume
+          emptyDir: {}
+        - name: osm-data
+          persistentVolumeClaim:
+            claimName: osm-data-pvc
+
+---
+# 3. Deployment Server
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: osm-tile-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: osm-tile-server
+  template:
+    metadata:
+      labels:
+        app: osm-tile-server
+    spec:
+      containers:
+        - name: osm-tile-server
+          image: overv/openstreetmap-tile-server:latest
+          args: ["run"]
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: osm-data
+              mountPath: /data/database/
+      volumes:
+        - name: osm-data
+          persistentVolumeClaim:
+            claimName: osm-data-pvc
+
+---
+# 4. Service (Tetap ClusterIP untuk digunakan oleh Ingress)
+apiVersion: v1
+kind: Service
+metadata:
+  name: osm-tile-server-svc
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    app: osm-tile-server
+
+---
+# 5. Ingress Traefik untuk maps.alvin.web.id
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: osm-tile-server-ingress
+  annotations:
+    # Opsional: Uncomment jika menggunakan HTTPS/TLS via cert-manager
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  ingressClassName: traefik
+  # Opsional: Uncomment bagian TLS di bawah ini jika menggunakan HTTPS
+  # tls:
+  # - hosts:
+  #     - maps.alvin.web.id
+  #   secretName: maps-alvin-web-id-tls
+  rules:
+    - host: maps.alvin.web.id
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: osm-tile-server-svc
+                port:
+                  number: 80
