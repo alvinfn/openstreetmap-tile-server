@@ -13,39 +13,38 @@ spec:
 
 ---
 # 2. Job untuk mengunduh dan melakukan import data (dijalankan sekali)
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: osm-import-job
-spec:
-  template:
-    spec:
-      restartPolicy: OnFailure
-      initContainers:
-        - name: download-pbf
-          image: alpine:latest
-          command: ["/bin/sh", "-c"]
-          args:
-            - "apk add --no-cache wget && wget -O /data/region.osm.pbf https://download.geofabrik.de/europe/luxembourg-latest.osm.pbf"
-          volumeMounts:
-            - name: pbf-volume
-              mountPath: /data
-      containers:
-        - name: osm-import
-          image: overv/openstreetmap-tile-server:latest
-          args: ["import"]
-          volumeMounts:
-            - name: pbf-volume
-              mountPath: /data/region.osm.pbf
-              subPath: region.osm.pbf
-            - name: osm-data
-              mountPath: /data/database/
-      volumes:
-        - name: pbf-volume
-          emptyDir: {}
-        - name: osm-data
-          persistentVolumeClaim:
-            claimName: osm-data-pvc
+# apiVersion: batch/v1
+# kind: Job
+# metadata:
+#   name: osm-import-job
+# spec:
+#   template:
+#     spec:
+#       restartPolicy: OnFailure
+#       initContainers:
+#         - name: download-pbf
+#           image: alpine:latest
+#           command: ["/bin/sh", "-c"]
+#           args:
+#             - "apk add --no-cache wget && wget -O /data/region.osm.pbf https://download.geofabrik.de/asia/indonesia/java-latest.osm.pbf && wget -O /data/region.poly https://download.geofabrik.de/asia/indonesia/java.poly"
+#           volumeMounts:
+#             - name: pbf-volume
+#               mountPath: /data
+#       containers:
+#         - name: osm-import
+#           image: overv/openstreetmap-tile-server:latest
+#           args: ["import"]
+#           volumeMounts:
+#             - name: pbf-volume
+#               mountPath: /data/
+#             - name: osm-data
+#               mountPath: /data/database/
+#       volumes:
+#         - name: pbf-volume
+#           emptyDir: {}
+#         - name: osm-data
+#           persistentVolumeClaim:
+#             claimName: osm-data-pvc
 
 ---
 # 3a. ServiceAccount & RBAC agar Deployment bisa mengecek status Job
@@ -82,7 +81,7 @@ kind: Deployment
 metadata:
   name: osm-tile-server
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: osm-tile-server
@@ -92,16 +91,16 @@ spec:
         app: osm-tile-server
     spec:
       serviceAccountName: osm-deploy-sa # Menggunakan ServiceAccount yang dibuat di atas
-      initContainers:
-        - name: wait-for-import-job
-          image: bitnami/kubectl:latest
-          command:
-            - /bin/sh
-            - -c
-            - |
-              echo "Menunggu osm-import-job selesai..."
-              # Timeout diset 24 jam (86400s) karena import database OSM bisa memakan waktu berjam-jam
-              kubectl wait --for=condition=complete job/osm-import-job --timeout=86400s
+      # initContainers:
+      #   - name: wait-for-import-job
+      #     image: bitnami/kubectl:latest
+      #     command:
+      #       - /bin/sh
+      #       - -c
+      #       - |
+      #         echo "Menunggu osm-import-job selesai..."
+      #         # Timeout diset 24 jam (86400s) karena import database OSM bisa memakan waktu berjam-jam
+      #         kubectl wait --for=condition=complete job/osm-import-job --timeout=86400s
       containers:
         - name: osm-tile-server
           image: overv/openstreetmap-tile-server:latest
